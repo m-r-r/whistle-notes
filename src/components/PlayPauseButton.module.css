@@ -1,0 +1,29 @@
+
+.button {
+    display: inline-block;
+    text-align: center;
+    --var-play-button-color: #202020;
+    --var-play-button-size: 4rem;
+    width: var(--var-play-button-size);
+    height: var(--var-play-button-size);
+    padding: 0;
+}
+
+.playIcon, .pauseIcon {
+    display: inline-block;
+    color: transparent;
+    font-size: 0;
+    vertical-align: middle;
+    transition: border-left-width linear 100ms;
+}
+
+.playIcon {
+    border: calc(var(--var-play-button-size) * 0.4) solid transparent;
+    border-right: 0;
+    border-left: calc(var(--var-play-button-size) * 0.6) solid var(--var-play-button-color);
+}
+
+.pauseIcon {
+    border-left: 2rem double var(--var-play-button-color);
+    height: calc(var(--var-play-button-size) * .75);
+}
