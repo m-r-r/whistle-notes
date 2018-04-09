@@ -1,4 +1,5 @@
 // @flow
+import {Yin} from 'yin-pitch';
 
 // A sample rate in Hertz
 type SampleRate = number;
@@ -43,24 +44,8 @@ const frequencyToSamplesCount = (
   return Math.ceil(periodMs * sampleRate / 1000); // The number of samples can be determined by using a cross-multiplication
 };
 
-/**
- * Given the number of samples in a signal's period, calculate the frequency of the signal
- * @param {number} samplesCount Duration of the signal's period in number of samples
- * @param {number} sampleRate Sample rate in Hz
- * @return {number} The frequency of the signal, in hertz
- */
-const samplesCountToFrequency = (
-  samplesCount: SamplesCount,
-  sampleRate: SampleRate
-): Hz => {
-  const periodMs = samplesCount * 1000 / sampleRate; // Calculate the period using a cross-multiplication
-  return 1000 / periodMs; // Return the frequency in Hz
-};
-
 export default class AudioAnalyzer {
-  _currentSampleRate: ?SampleRate = null;
-  _maxPeriod: ?SamplesCount = null;
-  _minPeriod: ?SamplesCount = null;
+  _yin: Yin;
   _isSilence: boolean = true;
   _listener: ?Function;
   _currentEvent = {
@@ -100,6 +85,8 @@ export default class AudioAnalyzer {
       1,
       0
     );
+    this._yin = new Yin(scriptProcessor.bufferSize, context.sampleRate);
+
     console.info("Audio analyzer buffer size : " + scriptProcessor.bufferSize);
     scriptProcessor.onaudioprocess = this._handleAudioProcess.bind(this);
     passBandFilter.connect(scriptProcessor);
@@ -120,18 +107,6 @@ export default class AudioAnalyzer {
   _handleAudioProcess(event: any) {
     const inputBuffer: AudioBuffer = event.inputBuffer;
     const data = inputBuffer.getChannelData(0);
-
-    if (inputBuffer.sampleRate !== this._currentSampleRate) {
-      this._currentSampleRate = inputBuffer.sampleRate;
-      this._maxPeriod = frequencyToSamplesCount(
-        MIN_FREQUENCY,
-        inputBuffer.sampleRate
-      );
-      this._minPeriod = frequencyToSamplesCount(
-        MAX_FREQUENCY,
-        inputBuffer.sampleRate
-      );
-    }
 
     if (!this._isStarted) {
       this._isStarted = true;
@@ -156,21 +131,7 @@ export default class AudioAnalyzer {
       // If there is no sound, the frequency is set to null
       this._currentFrequency = null;
     } else {
-      // Otherwise, attempt to find the frequency using auto-correlation
-      const periodInSamples: ?SamplesCount = autoCorrelation(
-        data,
-        0 + this._minPeriod,
-        0 + this._maxPeriod
-      );
-
-      if (!periodInSamples) {
-        return;
-      }
-
-      const currentFrequency = samplesCountToFrequency(
-        periodInSamples,
-        inputBuffer.sampleRate
-      );
+      const currentFrequency = this._yin.getPitch(data);
       if (
         !this._currentFrequency ||
         Math.abs(this._currentFrequency - currentFrequency) > MIN_FREQ_DELTA
@@ -201,32 +162,4 @@ function volume(samples: Float32Array): number {
     total += Math.abs(samples[i]);
   }
   return total / samples.length;
-}
-
-function autoCorrelation(
-  samples: Float32Array,
-  minPeriod: number,
-  maxPeriod: number
-): ?number {
-  const length = Math.min(samples.length / 2, maxPeriod);
-
-  let closestPeriod = null;
-  let lowestDelta = Infinity;
-  for (
-    let currentPeriod = minPeriod;
-    currentPeriod < maxPeriod;
-    currentPeriod++
-  ) {
-    let delta = 0;
-    for (let i = 0; i < length; i++) {
-      delta += Math.abs(samples[i] - samples[i + currentPeriod]);
-    }
-
-    if (delta < lowestDelta) {
-      lowestDelta = delta;
-      closestPeriod = currentPeriod;
-    }
-  }
-
-  return closestPeriod;
 }

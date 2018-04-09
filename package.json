@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@m-r-r/music-notes": "git+https://github.com/m-r-r/music-notes.git",
+    "yin-pitch": "git+https://github.com/m-r-r/yin-pitch.git",
     "react": "^16.3.0",
     "react-dom": "^16.3.0",
     "react-redux": "5.0.7",
